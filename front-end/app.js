@@ -38,8 +38,9 @@ let history = [
 ];
 
 const root = document.getElementById('view-root');
+const API_BASE = 'http://127.0.0.1:3000/api';
 async function api(path, options = {}) {
-  const response = await fetch(`/api${path}`, { headers: { 'content-type': 'application/json' }, ...options });
+  const response = await fetch(`${API_BASE}${path}`, { headers: { 'content-type': 'application/json' }, ...options });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'The server could not complete that request.');
   return result;
