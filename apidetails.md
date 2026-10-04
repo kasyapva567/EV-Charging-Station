@@ -26,4 +26,4 @@ The server listens on Render's `PORT` environment variable and binds to all netw
 
 Application state is kept in memory and resets whenever the server restarts or redeploys. Render's free web services can spin down while idle, so the first request afterward may take longer. Add persistent database storage before relying on this app for durable data. The dashboard currently has no authentication; do not expose real station controls publicly until access control is added.
 
-The server simulates charging progress. Charger status changes are held in memory and reset when the server restarts.
+The server simulates charging progress. Charger status changes are held in memory and reset when the server restarts. Vehicle IDs must be unique across the shared live fleet, including the demo vehicles.

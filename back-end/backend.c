@@ -634,7 +634,7 @@ static void handle_api(int fd, char *method, char *path, char *body)
     for (int i = 0; i < vehicle_count; i++)
       if (!strcmp(vehicles[i].id, id))
       {
-        error_json(fd, 409, "That vehicle ID already exists.");
+        error_json(fd, 409, "That vehicle ID is already registered. Enter a unique vehicle ID.");
         return;
       }
     Vehicle *v = &vehicles[vehicle_count++];
