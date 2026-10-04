@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5f7f8" />
+  <title>Charing station</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="nrml.css" />
+</head>
+
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#dashboard" aria-label="dashboard">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M13.2 1.8 5 13.1h5.7l-.8 9.1L19 10.1h-5.8z" /></svg></span><span class="brand-copy"><b>Charging station</b><small>ADMIN</small></span>
+      </a>
+      <nav class="nav-list" aria-label="Main navigation">
+        <a class="nav-link active" href="#dashboard" data-view="dashboard"><span class="nav-icon">▦</span>Dashboard</a>
+        <a class="nav-link" href="#queue" data-view="queue"><span class="nav-icon">☷</span>Queue<span class="nav-badge"
+            id="queue-count">7</span></a>
+        <a class="nav-link" href="#vehicles" data-view="vehicles"><span class="nav-icon">□</span>Vehicles</a>
+        <a class="nav-link" href="#history" data-view="history"><span class="nav-icon">◉</span>History</a>
+      </nav>
+      <div class="profile"><span class="avatar">A</span><span><b>Admin</b><small>Station
+            Administrator</small></span><span class="profile-arrow">↗</span></div>
+    </aside>
+    <main class="main-area">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobile-menu" aria-label="Toggle menu">☰</button>
+        <label class="global-search"><span>⌕</span><input id="global-search" placeholder="Search chargers, vehicles…"
+            aria-label="Search chargers and vehicles" /></label>
+        <button class="top-avatar" aria-label="Admin profile">A</button>
+      </header>
+      <div id="view-root" class="view-root"></div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <dialog id="vehicle-dialog" class="modal">
+    <form id="vehicle-form" method="dialog">
+      <div class="modal-head">
+        <div><span class="eyebrow">FLEET MANAGEMENT</span>
+          <h2>Add a vehicle</h2>
+        </div><button type="button" class="icon-close" data-close>×</button>
+      </div>
+      <label>Vehicle ID<input name="id" required placeholder="e.g. AP39AB1234" /></label>
+      <div class="form-grid"><label>Owner<input name="owner" required
+            placeholder="Owner name" /></label><label>Model<input name="model" required
+            placeholder="Vehicle model" /></label></div>
+      <div class="form-grid"><label>Battery level (%)<input name="battery" type="number" min="0" max="100" value="50"
+            required /></label><label>Charge up to (%)<input name="target" type="number" min="1" max="100" value="80"
+            required /></label></div>
+      <label>Battery capacity (kWh)<input name="capacity" type="number" min="1" value="50"
+            required /></label>
+      <label>Connector<select name="connector">
+          <option>CCS2</option>
+          <option>Type 2</option>
+          <option>CHAdeMO</option>
+        </select></label>
+      <div class="modal-actions"><button type="button" class="button button-secondary" data-close>Cancel</button><button
+          class="button button-primary" type="submit">Add vehicle</button></div>
+    </form>
+  </dialog>
+  <dialog id="charger-dialog" class="modal charger-manager-modal">
+    <form id="charger-form" method="dialog">
+      <div class="modal-head">
+        <div><span class="eyebrow">STATION CONTROLS</span><h2>Manage chargers</h2></div>
+        <button type="button" class="icon-close" data-close aria-label="Close">×</button>
+      </div>
+      <p class="charger-manager-note">Set each charger to Available, Offline, or Maintenance. Stop an active charging session before changing that charger's status.</p>
+      <div id="charger-settings-list" class="charger-settings-list"></div>
+      <div class="modal-actions"><button type="button" class="button button-secondary" data-close>Cancel</button><button class="button button-primary" type="submit">Save changes</button></div>
+    </form>
+  </dialog>
+  <script src="app.js"></script>
+</body>
+
+</html>
