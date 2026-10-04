@@ -231,16 +231,25 @@ document.addEventListener('input', event => {
 document.addEventListener('change', event => {
   if (event.target.id === 'history-status') { historyPage = 1; render(); }
 });
-document.getElementById('vehicle-form').addEventListener('submit', event => {
+document.getElementById('vehicle-form').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;
   const values = new FormData(form);
   const id = String(values.get('id')).trim().toUpperCase();
   const vehicle = { id, owner: values.get('owner'), model: values.get('model'), battery: Number(values.get('battery')), target: Number(values.get('target')), capacity: Number(values.get('capacity')), connector: values.get('connector') };
-  api('/vehicles', { method: 'POST', body: JSON.stringify(vehicle) }).then(async () => {
+  try {
+    await refreshData();
+    if (vehicles.some(existing => existing.id.toUpperCase() === id)) {
+      showToast(`${id} is already registered. Enter a unique vehicle ID.`);
+      form.elements.namedItem('id').focus();
+      return;
+    }
+    await api('/vehicles', { method: 'POST', body: JSON.stringify(vehicle) });
     await refreshData(); form.reset(); document.getElementById('vehicle-dialog').close();
     showToast(`${id} added to the fleet and charging queue.`); render();
-  }).catch(error => showToast(error.message));
+  } catch (error) {
+    showToast(error.message);
+  }
 });
 document.getElementById('charger-form').addEventListener('submit', saveChargerSettings);
 document.getElementById('mobile-menu').addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
