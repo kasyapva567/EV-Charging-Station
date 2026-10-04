@@ -725,6 +725,19 @@ int main(void)
 {
   signal(SIGPIPE, SIG_IGN);
   seed();
+  const char *port_env = getenv("PORT");
+  char *port_end = NULL;
+  long port = PORT;
+  if (port_env)
+  {
+    errno = 0;
+    port = strtol(port_env, &port_end, 10);
+    if (errno || port_end == port_env || *port_end != '\0' || port < 1 || port > 65535)
+    {
+      fprintf(stderr, "Invalid PORT value: %s\n", port_env);
+      return 1;
+    }
+  }
   int s = socket(AF_INET, SOCK_STREAM, 0);
   if (s < 0)
   {
@@ -735,14 +748,14 @@ int main(void)
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-  addr.sin_port = htons(PORT);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_port = htons((unsigned short)port);
   if (bind(s, (struct sockaddr *)&addr, sizeof addr) < 0 || listen(s, 16) < 0)
   {
     perror("bind/listen");
     return 1;
   }
-  printf("Charging station backend: http://127.0.0.1:%d\n", PORT);
+  printf("Charging station backend listening on port %ld\n", port);
   for (;;)
   {
     int client = accept(s, NULL, NULL);
