@@ -48,14 +48,14 @@
           <h2>Add a vehicle</h2>
         </div><button type="button" class="icon-close" data-close>×</button>
       </div>
-      <label>Vehicle ID<input name="id" required placeholder="Enter a unique registration ID" /></label>
+      <label>Vehicle ID<input name="id" maxlength="31" required placeholder="Enter a unique registration ID" /></label>
       <div class="form-grid"><label>Owner<input name="owner" required
-            placeholder="Owner name" /></label><label>Model<input name="model" required
-            placeholder="Vehicle model" /></label></div>
+            placeholder="Owner name" maxlength="79" /></label><label>Model<input name="model" required
+            placeholder="Vehicle model" maxlength="79" /></label></div>
       <div class="form-grid"><label>Battery level (%)<input name="battery" type="number" min="0" max="100" value="50"
             required /></label><label>Charge up to (%)<input name="target" type="number" min="1" max="100" value="80"
             required /></label></div>
-      <label>Battery capacity (kWh)<input name="capacity" type="number" min="1" value="50"
+      <label>Battery capacity (kWh)<input name="capacity" type="number" min="0.1" step="0.1" value="50"
             required /></label>
       <label>Connector<select name="connector">
           <option>CCS2</option>
@@ -64,6 +64,25 @@
         </select></label>
       <div class="modal-actions"><button type="button" class="button button-secondary" data-close>Cancel</button><button
           class="button button-primary" type="submit">Add vehicle</button></div>
+    </form>
+  </dialog>
+  <dialog id="queue-edit-dialog" class="modal">
+    <form id="queue-edit-form" method="dialog">
+      <div class="modal-head">
+        <div><span class="eyebrow">QUEUE MANAGEMENT</span><h2>Edit queue entry</h2></div>
+        <button type="button" class="icon-close" data-close aria-label="Close">×</button>
+      </div>
+      <label>Vehicle ID<input name="id" readonly /></label>
+      <label>Owner<input name="owner" required maxlength="79" /></label>
+      <div class="form-grid">
+        <label>Battery level (%)<input name="battery" type="number" min="0" max="100" required /></label>
+        <label>Target charge (%)<input name="target" type="number" min="1" max="100" required /></label>
+      </div>
+      <label>Requested energy (kWh)<input name="requested" type="number" min="1" required /></label>
+      <div class="modal-actions">
+        <button type="button" class="button button-secondary" data-close>Cancel</button>
+        <button class="button button-primary" type="submit">Save changes</button>
+      </div>
     </form>
   </dialog>
   <dialog id="charger-dialog" class="modal charger-manager-modal">

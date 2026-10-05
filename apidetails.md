@@ -22,6 +22,8 @@ The repository includes a root-level `Dockerfile` that builds the C server and p
 
 The server listens on Render's `PORT` environment variable and binds to all network interfaces. Locally, it defaults to port 3000.
 
+The API supports editing and deleting queue entries with `PUT` and `DELETE /api/queue/{vehicleId}`, and editing and deleting fleet records with `PUT` and `DELETE /api/vehicles/{vehicleId}`. Removing a queue entry leaves its vehicle in the fleet. Removing a fleet vehicle also removes its queue entry; a vehicle with an active charging session must be stopped before it can be deleted. Session history is retained.
+
 ## Limitations
 
 Application state is kept in memory and resets whenever the server restarts or redeploys. Render's free web services can spin down while idle, so the first request afterward may take longer. Add persistent database storage before relying on this app for durable data. The dashboard currently has no authentication; do not expose real station controls publicly until access control is added.
