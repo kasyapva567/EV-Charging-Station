@@ -13,6 +13,7 @@ let queue = [
   { id: 'KA01CD9012', owner: 'kishore', battery: 19, requested: 30, waiting: 15, arrival: '14:21' },
   { id: 'TN09KL2345', owner: 'akhil', battery: 28, requested: 45, waiting: 23, arrival: '14:13' },
   { id: 'AP39NV2007', owner: 'sneha', battery: 2, requested: 20, waiting: 30, arrival: '16:22' },
+  { id:'AP34FD9980', owner:'abhi',battery:3,requested: 30,waiting:12,arrival:'07:54'}
 
 ];
 let chargers = [
