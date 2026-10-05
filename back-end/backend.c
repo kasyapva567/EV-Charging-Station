@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
+#include <math.h>
 #include <netinet/in.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -247,11 +248,11 @@ static void send_all(int fd, const char *data, size_t len)
 static void respond(int fd, int code, const char *type, const char *body)
 {
   char head[512];
-  int n = snprintf(head, sizeof head, "HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n\r\n", code, code == 200 ? "OK" : code == 201 ? "Created"
-                                                                                                                                                                                         : code == 400   ? "Bad Request"
-                                                                                                                                                                                         : code == 404   ? "Not Found"
-                                                                                                                                                                                         : code == 409   ? "Conflict"
-                                                                                                                                                                                                         : "Error",
+  int n = snprintf(head, sizeof head, "HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n\r\n", code, code == 200 ? "OK" : code == 201 ? "Created"
+                                                                                                                                                                                                                                                                                           : code == 400   ? "Bad Request"
+                                                                                                                                                                                                                                                                                           : code == 404   ? "Not Found"
+                                                                                                                                                                                                                                                                                           : code == 409   ? "Conflict"
+                                                                                                                                                                                                                                                                                                           : "Error",
                    type, strlen(body));
   send_all(fd, head, (size_t)n);
   send_all(fd, body, strlen(body));
@@ -291,6 +292,211 @@ static char *value(char *body, const char *key, char *out, size_t cap)
     out[i++] = *p++;
   out[i] = '\0';
   return out;
+}
+static int decode_path_id(const char *path, const char *prefix, char *id, size_t cap)
+{
+  size_t prefix_len = strlen(prefix);
+  if (strncmp(path, prefix, prefix_len) != 0)
+    return 0;
+  const char *p = path + prefix_len;
+  size_t i = 0;
+  if (!*p || strchr(p, '/'))
+    return 0;
+  while (*p)
+  {
+    unsigned char c = (unsigned char)*p++;
+    if (c == '%')
+    {
+      if (!isxdigit((unsigned char)p[0]) || !isxdigit((unsigned char)p[1]))
+        return 0;
+      int high = isdigit((unsigned char)p[0]) ? p[0] - '0' : tolower((unsigned char)p[0]) - 'a' + 10;
+      int low = isdigit((unsigned char)p[1]) ? p[1] - '0' : tolower((unsigned char)p[1]) - 'a' + 10;
+      c = (unsigned char)(high * 16 + low);
+      p += 2;
+    }
+    if (c < 32 || c == 0 || i + 1 >= cap)
+      return 0;
+    id[i++] = (char)toupper(c);
+  }
+  id[i] = '\0';
+  return i > 0;
+}
+static int find_vehicle(const char *id)
+{
+  for (int i = 0; i < vehicle_count; i++)
+    if (!strcmp(vehicles[i].id, id))
+      return i;
+  return -1;
+}
+static int find_queue_item(const char *id)
+{
+  for (int i = 0; i < queue_count; i++)
+    if (!strcmp(queue_items[i].id, id))
+      return i;
+  return -1;
+}
+static int vehicle_is_charging(const char *id)
+{
+  for (int i = 0; i < charger_count; i++)
+    if (!strcmp(chargers[i].status, "Charging") && !strcmp(chargers[i].vehicle, id))
+      return 1;
+  return 0;
+}
+static int cmp_queue(const void *aa, const void *bb);
+static void remove_queue_item(int index)
+{
+  for (int i = index; i < queue_count - 1; i++)
+    queue_items[i] = queue_items[i + 1];
+  queue_count--;
+  qsort(queue_items, (size_t)queue_count, sizeof queue_items[0], cmp_queue);
+}
+static int read_int_field(char *body, const char *key, int *result)
+{
+  char text[40] = {0};
+  if (!value(body, key, text, sizeof text) || !text[0])
+    return 0;
+  char *end = NULL;
+  errno = 0;
+  long number = strtol(text, &end, 10);
+  if (errno || end == text || *end || number < 0 || number > 1000000)
+    return 0;
+  *result = (int)number;
+  return 1;
+}
+static int read_capacity_field(char *body, double *result)
+{
+  char text[40] = {0};
+  if (!value(body, "capacity", text, sizeof text) || !text[0])
+    return 0;
+  char *end = NULL;
+  errno = 0;
+  double capacity = strtod(text, &end);
+  if (errno || end == text || *end || !isfinite(capacity) || capacity <= 0)
+    return 0;
+  *result = capacity;
+  return 1;
+}
+static void update_queue_entry(int fd, const char *id, char *body)
+{
+  int qi = find_queue_item(id);
+  if (qi < 0)
+  {
+    error_json(fd, 404, "Vehicle is not in the queue.");
+    return;
+  }
+  char owner[80] = {0};
+  int battery, requested, target;
+  if (!value(body, "owner", owner, sizeof owner) || !owner[0] ||
+      !read_int_field(body, "battery", &battery) || battery > 100 ||
+      !read_int_field(body, "requested", &requested) || requested < 1 ||
+      !read_int_field(body, "target", &target) || target > 100 || target <= battery)
+  {
+    error_json(fd, 400, "Enter a valid owner, battery level, requested energy, and target above the battery level.");
+    return;
+  }
+  QueueItem *item = &queue_items[qi];
+  snprintf(item->owner, sizeof item->owner, "%s", owner);
+  item->battery = battery;
+  item->requested = requested;
+  item->target = target;
+  int vi = find_vehicle(id);
+  if (vi >= 0 && !strcmp(vehicles[vi].status, "Queued"))
+  {
+    snprintf(vehicles[vi].owner, sizeof vehicles[vi].owner, "%s", owner);
+    vehicles[vi].battery = battery;
+  }
+  qsort(queue_items, (size_t)queue_count, sizeof queue_items[0], cmp_queue);
+  qi = find_queue_item(id);
+  char out[512];
+  json_queue(out, sizeof out, &queue_items[qi]);
+  respond(fd, 200, "application/json; charset=utf-8", out);
+}
+static void delete_queue_entry(int fd, const char *id)
+{
+  int qi = find_queue_item(id);
+  if (qi < 0)
+  {
+    error_json(fd, 404, "Vehicle is not in the queue.");
+    return;
+  }
+  remove_queue_item(qi);
+  int vi = find_vehicle(id);
+  if (vi >= 0 && !strcmp(vehicles[vi].status, "Queued"))
+    snprintf(vehicles[vi].status, sizeof vehicles[vi].status, "Available");
+  respond(fd, 200, "application/json; charset=utf-8", "{\"deleted\":true}");
+}
+static void update_vehicle(int fd, const char *id, char *body)
+{
+  int vi = find_vehicle(id);
+  if (vi < 0)
+  {
+    error_json(fd, 404, "Vehicle not found.");
+    return;
+  }
+  Vehicle *vehicle = &vehicles[vi];
+  char owner[80] = {0}, model[80] = {0}, connector[20] = {0}, text[40] = {0};
+  int battery = vehicle->battery;
+  double capacity;
+  if (!value(body, "owner", owner, sizeof owner) || !owner[0] ||
+      !value(body, "model", model, sizeof model) || !model[0] ||
+      !value(body, "connector", connector, sizeof connector) || !connector[0] ||
+      (value(body, "battery", text, sizeof text) && text[0] && !read_int_field(body, "battery", &battery)) ||
+      battery > 100 || !read_capacity_field(body, &capacity))
+  {
+    error_json(fd, 400, "Enter valid vehicle details.");
+    return;
+  }
+  if (vehicle_is_charging(id) && battery != vehicle->battery)
+  {
+    error_json(fd, 409, "Stop charging before changing this vehicle's battery level.");
+    return;
+  }
+  int qi = find_queue_item(id);
+  if (qi >= 0 && battery >= queue_items[qi].target)
+  {
+    error_json(fd, 400, "The battery level must be below this vehicle's queue target.");
+    return;
+  }
+  snprintf(vehicle->owner, sizeof vehicle->owner, "%s", owner);
+  snprintf(vehicle->model, sizeof vehicle->model, "%s", model);
+  snprintf(vehicle->connector, sizeof vehicle->connector, "%s", connector);
+  vehicle->battery = battery;
+  vehicle->capacity = capacity;
+  if (qi >= 0)
+  {
+    snprintf(queue_items[qi].owner, sizeof queue_items[qi].owner, "%s", owner);
+    queue_items[qi].battery = battery;
+    queue_items[qi].requested = (int)(capacity + 0.5);
+    qsort(queue_items, (size_t)queue_count, sizeof queue_items[0], cmp_queue);
+  }
+  char out[512];
+  json_vehicle(out, sizeof out, vehicle);
+  respond(fd, 200, "application/json; charset=utf-8", out);
+}
+static void delete_vehicle(int fd, const char *id)
+{
+  int vi = find_vehicle(id);
+  if (vi < 0)
+  {
+    error_json(fd, 404, "Vehicle not found.");
+    return;
+  }
+  if (vehicle_is_charging(id))
+  {
+    error_json(fd, 409, "Stop charging before deleting this vehicle.");
+    return;
+  }
+  for (int i = 0; i < queue_count;)
+  {
+    if (!strcmp(queue_items[i].id, id))
+      remove_queue_item(i);
+    else
+      i++;
+  }
+  for (int i = vi; i < vehicle_count - 1; i++)
+    vehicles[i] = vehicles[i + 1];
+  vehicle_count--;
+  respond(fd, 200, "application/json; charset=utf-8", "{\"deleted\":true}");
 }
 static void serve_file(int fd, const char *path)
 {
@@ -475,6 +681,25 @@ static void handle_api(int fd, char *method, char *path, char *body)
   {
     json_array(out, sizeof out, kind);
     respond(fd, 200, "application/json; charset=utf-8", out);
+    return;
+  }
+  char id[64];
+  if ((!strcmp(method, "PUT") || !strcmp(method, "DELETE")) &&
+      decode_path_id(path, "/api/queue/", id, sizeof id))
+  {
+    if (!strcmp(method, "PUT"))
+      update_queue_entry(fd, id, body);
+    else
+      delete_queue_entry(fd, id);
+    return;
+  }
+  if ((!strcmp(method, "PUT") || !strcmp(method, "DELETE")) &&
+      decode_path_id(path, "/api/vehicles/", id, sizeof id))
+  {
+    if (!strcmp(method, "PUT"))
+      update_vehicle(fd, id, body);
+    else
+      delete_vehicle(fd, id);
     return;
   }
   if (!strcmp(method, "POST") && !strcmp(path, "/api/queue/recalculate"))

@@ -340,6 +340,18 @@ button {
     border-color: #17212b
 }
 
+.button-danger {
+    background: var(--red-soft);
+    color: var(--red);
+    border-color: #f0c9c7
+}
+
+.row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px
+}
+
 .button-small {
     min-height: 30px;
     padding: 0 10px;

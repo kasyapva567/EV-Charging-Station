@@ -3,25 +3,24 @@ let vehicles = [
   { id: 'AP40CD5678', owner: 'sandhya', model: 'MG ZS EV', battery: 15, capacity: 50.3, connector: 'CCS2', sessions: 18, last: 'Yesterday 18:22', status: 'Queued' },
   { id: 'MH12AB5678', owner: 'gowtham', model: 'Hyundai Ioniq 5', battery: 41, capacity: 72.6, connector: 'CCS2', sessions: 31, last: 'Today 14:24', status: 'Charging' },
   { id: 'KA01CD9012', owner: 'kishore', model: 'Kia EV6', battery: 77, capacity: 77.4, connector: 'Type 2', sessions: 12, last: 'Today 13:50', status: 'Charging' },
-  { id: 'DL3CAA2341', owner: 'jack devarakonda', model: 'Ola S1 Pro', battery: 55, capacity: 3.97, connector: 'CCS2', sessions: 45, last: 'Today 14:15', status: 'Charging' },
-  { id: 'MH14GH3456', owner: 'sneha', model: 'Nexon EV Max', battery: 19, capacity: 40.5, connector: 'Type 2', sessions: 9, last: '2 days ago', status: 'Queued' },
+  { id: 'TN09KL2345', owner: 'akhil', model: 'Ola S1 Pro', battery: 55, capacity: 3.97, connector: 'CCS2', sessions: 45, last: 'Today 14:15', status: 'Charging' },
+  { id: 'AP39NV2007', owner: 'sneha', model: 'Nexon EV Max', battery: 19, capacity: 40.5, connector: 'Type 2', sessions: 9, last: '2 days ago', status: 'Queued' },
 ];
 let queue = [
   { id: 'AP39AB1234', owner: 'kiran', battery: 8, requested: 35, waiting: 4, arrival: '14:32' },
-  { id: 'AP40CD5678', owner: 'sandy', battery: 15, requested: 40, waiting: 8, arrival: '14:28' },
-  { id: 'AP39EF9012', owner: 'gowtham', battery: 42, requested: 25, waiting: 12, arrival: '14:24' },
-  { id: 'MH14GH3456', owner: 'kishore', battery: 19, requested: 30, waiting: 15, arrival: '14:21' },
-  { id: 'KA05IJ7890', owner: 'jack devarakonda', battery: 63, requested: 20, waiting: 19, arrival: '14:17' },
-  { id: 'TN09KL2345', owner: 'burito', battery: 28, requested: 45, waiting: 23, arrival: '14:13' },
-  { id: 'AP39NV2007', owner:'Kasyap', battery:2, requested:20, waiting:30, arrival:'16:22'},
+  { id: 'AP40CD5678', owner: 'sandhya', battery: 15, requested: 40, waiting: 8, arrival: '14:28' },
+  { id: 'MH12AB5678', owner: 'gowtham', battery: 42, requested: 25, waiting: 12, arrival: '14:24' },
+  { id: 'KA01CD9012', owner: 'kishore', battery: 19, requested: 30, waiting: 15, arrival: '14:21' },
+  { id: 'TN09KL2345', owner: 'akhil', battery: 28, requested: 45, waiting: 23, arrival: '14:13' },
+  { id: 'AP39NV2007', owner: 'sneha', battery: 2, requested: 20, waiting: 30, arrival: '16:22' },
 
 ];
 let chargers = [
   { id: 'CH-01', type: 'CCS2', status: 'Available' },
-  { id: 'CH-02', type: 'CCS2', status: 'Charging', vehicle: 'AP39AB1234', power: 92, minutes: 34, battery: 64 },
+  { id: 'CH-02', type: 'CCS2', status: 'Available' },
   { id: 'CH-03', type: 'Type 2', status: 'Maintenance' },
-  { id: 'CH-04', type: 'CCS2', status: 'Charging', vehicle: 'MH12AB5678', power: 118, minutes: 18, battery: 41 },
-  { id: 'CH-05', type: 'Type 2', status: 'Charging', vehicle: 'KA01CD9012', power: 19, minutes: 52, battery: 77 },
+  { id: 'CH-04', type: 'CCS2', status: 'Available' },
+  { id: 'CH-05', type: 'Type 2', status: 'Available' },
   { id: 'CH-06', type: 'CHAdeMO', status: 'Available' },
   { id: 'CH-07', type: 'CCS2', status: 'Available' },
   { id: 'CH-08', type: 'Type 2', status: 'Offline' }
@@ -59,6 +58,7 @@ const pill = value => `<span class="pill ${safeClass(value)}">${escapeHtml(value
 let view = location.hash.slice(1) || 'dashboard';
 let historyPage = 1;
 let toastTimer;
+let editingVehicleId = null;
 
 function stat(label, value, note = '', color = '') {
   return `<article class="stat-card"><div class="stat-label">${label}</div><div class="stat-value ${color}">${value}</div>${note ? `<div class="stat-note">${note}</div>` : ''}</article>`;
@@ -92,7 +92,7 @@ function renderQueue() {
   return `${heading('Charging Queue', 'Manage vehicles waiting for available chargers.', actions)}
     <section class="stat-grid">${stat('Queue size', queue.length)}${stat('High priority', highPriority, '', 'warning')}${stat('Available chargers', available, '', 'good')}${stat('Avg wait', `${queue.length ? Math.round(queue.reduce((total, item) => total + item.waiting, 0) / queue.length) : 0} min`)}</section>
     <div class="rule-strip"><span class="rule-title">♧ &nbsp;Priority Rules (Min-Heap)</span><span class="rule-item"><i class="dot" style="color:var(--red)"></i><b> ̰cy</b> — Battery ≤ 10%</span><span class="rule-item"><i class="dot" style="color:var(--amber)"></i><b>High</b> — Battery 11–20%</span><span class="rule-item"><i class="dot" style="color:#98a4b0"></i><b>Normal</b> — Battery &gt; 20%</span><span class="rule-item"><i class="dot" style="color:#5d9df2"></i>Waiting time increases priority after <b>15 min</b></span></div>
-    <div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Vehicle ID</th><th>Owner</th><th>Battery</th><th>Target charge</th><th>Priority</th><th>Waiting / estimate</th><th>Arrival</th><th>Action</th></tr></thead><tbody>${queue.map((item, index) => `<tr class="${priority(item.battery) === 'Emergency' ? 'urgent-row' : ''}"><td><span class="rank ${safeClass(priority(item.battery))}">${index + 1}</span></td><td class="mono">${item.id}</td><td>${escapeHtml(item.owner)}</td><td>${batteryBar(item.battery)}</td><td>${item.target || 80}%</td><td>${pill(priority(item.battery))}</td><td>${item.waiting} min waited<br><span class="subtext">Est. ${index * 6} min</span></td><td class="mono">${item.arrival}</td><td><button class="button button-primary button-small" data-assign="${item.id}">Assign Charger</button></td></tr>`).join('')}</tbody></table></div>`;
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Vehicle ID</th><th>Owner</th><th>Battery</th><th>Target charge</th><th>Priority</th><th>Waiting / estimate</th><th>Arrival</th><th>Actions</th></tr></thead><tbody>${queue.map((item, index) => `<tr class="${priority(item.battery) === 'Emergency' ? 'urgent-row' : ''}"><td><span class="rank ${safeClass(priority(item.battery))}">${index + 1}</span></td><td class="mono">${escapeHtml(item.id)}</td><td>${escapeHtml(item.owner)}</td><td>${batteryBar(item.battery)}</td><td>${item.target || 80}%</td><td>${pill(priority(item.battery))}</td><td>${item.waiting} min waited<br><span class="subtext">Est. ${index * 6} min</span></td><td class="mono">${escapeHtml(item.arrival)}</td><td><div class="row-actions"><button class="button button-primary button-small" data-assign="${escapeHtml(item.id)}">Assign</button><button class="button button-secondary button-small" data-edit-queue="${escapeHtml(item.id)}">Edit</button><button class="button button-danger button-small" data-delete-queue="${escapeHtml(item.id)}">Delete</button></div></td></tr>`).join('') || '<tr><td colspan="9"><div class="empty-state">The charging queue is empty.</div></td></tr>'}</tbody></table></div>`;
 }
 function renderVehicles() {
   const localQuery = (document.getElementById('vehicle-search')?.value || '').toLowerCase();
@@ -101,7 +101,7 @@ function renderVehicles() {
   const rows = vehicles.filter(vehicle => `${vehicle.id} ${vehicle.owner} ${vehicle.model}`.toLowerCase().includes(query));
   const action = '<button class="button button-primary" data-action="add-vehicle">＋ &nbsp;Add Vehicle</button>';
   return `${heading('Vehicles', 'Registered EVs and charging records.', action)}<div class="filters"><label class="search-field"><span>⌕</span><input id="vehicle-search" placeholder="Search by vehicle ID or owner…" value="${escapeHtml(localQuery)}" /></label></div>
-    <div class="table-wrap"><table class="data-table"><thead><tr><th>Vehicle ID</th><th>Owner</th><th>Model</th><th>Battery</th><th>Capacity</th><th>Connector</th><th>Sessions</th><th>Last charge</th><th>Status</th></tr></thead><tbody>${rows.map(vehicle => `<tr><td class="mono">${vehicle.id}</td><td>${escapeHtml(vehicle.owner)}</td><td>${escapeHtml(vehicle.model)}</td><td>${batteryBar(vehicle.battery)}</td><td>${vehicle.capacity} kWh</td><td>${escapeHtml(vehicle.connector)}</td><td><b>${vehicle.sessions}</b></td><td>${escapeHtml(vehicle.last)}</td><td>${pill(vehicle.status)}</td></tr>`).join('') || '<tr><td colspan="9"><div class="empty-state">No vehicles match that search.</div></td></tr>'}</tbody></table></div>`;
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Vehicle ID</th><th>Owner</th><th>Model</th><th>Battery</th><th>Capacity</th><th>Connector</th><th>Sessions</th><th>Last charge</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.map(vehicle => `<tr><td class="mono">${escapeHtml(vehicle.id)}</td><td>${escapeHtml(vehicle.owner)}</td><td>${escapeHtml(vehicle.model)}</td><td>${batteryBar(vehicle.battery)}</td><td>${vehicle.capacity} kWh</td><td>${escapeHtml(vehicle.connector)}</td><td><b>${vehicle.sessions}</b></td><td>${escapeHtml(vehicle.last)}</td><td>${pill(vehicle.status)}</td><td><div class="row-actions"><button class="button button-secondary button-small" data-edit-vehicle="${escapeHtml(vehicle.id)}">Edit</button><button class="button button-danger button-small" data-delete-vehicle="${escapeHtml(vehicle.id)}">Delete</button></div></td></tr>`).join('') || `<tr><td colspan="10"><div class="empty-state">${query ? 'No vehicles match that search.' : 'No vehicles have been registered.'}</div></td></tr>`}</tbody></table></div>`;
 }
 function renderHistory() {
   const query = (document.getElementById('history-search')?.value || '').toLowerCase();
@@ -128,6 +128,88 @@ function showToast(message) {
   toast.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+}
+function openVehicleDialog(id = null) {
+  const dialog = document.getElementById('vehicle-dialog');
+  const form = document.getElementById('vehicle-form');
+  const vehicle = id === null ? null : vehicles.find(item => item.id === id);
+  if (id !== null && !vehicle) {
+    showToast('That vehicle is no longer in the fleet. Refresh and try again.');
+    return;
+  }
+  editingVehicleId = vehicle?.id || null;
+  form.reset();
+  form.elements.namedItem('id').readOnly = Boolean(vehicle);
+  form.elements.namedItem('id').maxLength = 31;
+  form.elements.namedItem('owner').value = vehicle?.owner || '';
+  form.elements.namedItem('model').value = vehicle?.model || '';
+  form.elements.namedItem('battery').value = vehicle?.battery ?? 50;
+  form.elements.namedItem('battery').disabled = vehicle?.status === 'Charging';
+  form.elements.namedItem('target').value = 80;
+  form.elements.namedItem('capacity').value = vehicle?.capacity ?? 50;
+  form.elements.namedItem('connector').value = vehicle?.connector || 'CCS2';
+  dialog.querySelector('h2').textContent = vehicle ? `Edit ${vehicle.id}` : 'Add a vehicle';
+  form.querySelector('[type="submit"]').textContent = vehicle ? 'Save changes' : 'Add vehicle';
+  dialog.showModal();
+}
+function openQueueEditDialog(id) {
+  const item = queue.find(entry => entry.id === id);
+  if (!item) {
+    showToast('That queue entry is no longer waiting. Refresh and try again.');
+    return;
+  }
+  const form = document.getElementById('queue-edit-form');
+  form.elements.namedItem('id').value = item.id;
+  form.elements.namedItem('owner').value = item.owner;
+  form.elements.namedItem('battery').value = item.battery;
+  form.elements.namedItem('target').value = item.target || 80;
+  form.elements.namedItem('requested').value = item.requested;
+  document.getElementById('queue-edit-dialog').showModal();
+}
+async function saveQueueEdit(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const id = form.elements.namedItem('id').value;
+  const values = new FormData(form);
+  const updated = {
+    owner: values.get('owner'),
+    battery: Number(values.get('battery')),
+    target: Number(values.get('target')),
+    requested: Number(values.get('requested'))
+  };
+  try {
+    await api(`/queue/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(updated) });
+    await refreshData();
+    document.getElementById('queue-edit-dialog').close();
+    render();
+    showToast(`${id} queue entry updated.`);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+async function deleteQueueEntry(id) {
+  if (!window.confirm(`Remove ${id} from the charging queue? The vehicle will remain in the fleet.`))
+    return;
+  try {
+    await api(`/queue/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await refreshData();
+    render();
+    showToast(`${id} removed from the queue.`);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+async function deleteVehicle(id) {
+  if (!window.confirm(`Permanently delete ${id} from the fleet? Any waiting queue entry will also be removed.`))
+    return;
+  try {
+    await api(`/vehicles/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await refreshData();
+    render();
+    showToast(`${id} deleted from the fleet.`);
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 async function assignVehicle(id) {
   try {
@@ -202,8 +284,16 @@ document.addEventListener('click', event => {
   if (assignment) { assignVehicle(assignment.dataset.assign); return; }
   const stop = event.target.closest('[data-stop]');
   if (stop) { stopCharging(stop.dataset.stop); return; }
+  const editVehicle = event.target.closest('[data-edit-vehicle]');
+  if (editVehicle) { openVehicleDialog(editVehicle.dataset.editVehicle); return; }
+  const deleteVehicleButton = event.target.closest('[data-delete-vehicle]');
+  if (deleteVehicleButton) { deleteVehicle(deleteVehicleButton.dataset.deleteVehicle); return; }
+  const editQueue = event.target.closest('[data-edit-queue]');
+  if (editQueue) { openQueueEditDialog(editQueue.dataset.editQueue); return; }
+  const deleteQueueButton = event.target.closest('[data-delete-queue]');
+  if (deleteQueueButton) { deleteQueueEntry(deleteQueueButton.dataset.deleteQueue); return; }
   const action = event.target.closest('[data-action]')?.dataset.action;
-  if (action === 'add-vehicle') document.getElementById('vehicle-dialog').showModal();
+  if (action === 'add-vehicle') openVehicleDialog();
   if (action === 'manage-chargers') openChargerManager();
   if (action === 'recalculate') recalculateQueue();
   if (action === 'export') exportCsv();
@@ -236,21 +326,44 @@ document.getElementById('vehicle-form').addEventListener('submit', async event =
   const form = event.currentTarget;
   const values = new FormData(form);
   const id = String(values.get('id')).trim().toUpperCase();
-  const vehicle = { id, owner: values.get('owner'), model: values.get('model'), battery: Number(values.get('battery')), target: Number(values.get('target')), capacity: Number(values.get('capacity')), connector: values.get('connector') };
+  const vehicle = {
+    owner: values.get('owner'),
+    model: values.get('model'),
+    battery: values.has('battery') ? Number(values.get('battery')) : undefined,
+    capacity: Number(values.get('capacity')),
+    connector: values.get('connector')
+  };
   try {
     await refreshData();
-    if (vehicles.some(existing => existing.id.toUpperCase() === id)) {
+    if (editingVehicleId && !vehicles.some(existing => existing.id === editingVehicleId)) {
+      document.getElementById('vehicle-dialog').close();
+      showToast('That vehicle is no longer in the fleet. Refresh and try again.');
+      return;
+    }
+    if (!editingVehicleId && vehicles.some(existing => existing.id.toUpperCase() === id)) {
       showToast(`${id} is already registered. Enter a unique vehicle ID.`);
       form.elements.namedItem('id').focus();
       return;
     }
-    await api('/vehicles', { method: 'POST', body: JSON.stringify(vehicle) });
-    await refreshData(); form.reset(); document.getElementById('vehicle-dialog').close();
-    showToast(`${id} added to the fleet and charging queue.`); render();
+    if (editingVehicleId) {
+      await api(`/vehicles/${encodeURIComponent(editingVehicleId)}`, { method: 'PUT', body: JSON.stringify(vehicle) });
+    } else {
+      vehicle.id = id;
+      vehicle.target = Number(values.get('target'));
+      await api('/vehicles', { method: 'POST', body: JSON.stringify(vehicle) });
+    }
+    await refreshData();
+    form.reset();
+    document.getElementById('vehicle-dialog').close();
+    const wasEditing = editingVehicleId !== null;
+    editingVehicleId = null;
+    render();
+    showToast(wasEditing ? `${id} updated.` : `${id} added to the fleet and charging queue.`);
   } catch (error) {
     showToast(error.message);
   }
 });
+document.getElementById('queue-edit-form').addEventListener('submit', saveQueueEdit);
 document.getElementById('charger-form').addEventListener('submit', saveChargerSettings);
 document.getElementById('mobile-menu').addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
 window.addEventListener('hashchange', () => {
@@ -261,5 +374,5 @@ refreshData().then(render).catch(error => {
   root.innerHTML = `<section class="panel"><h2>Backend connection failed</h2><p>${escapeHtml(error.message)} Start the C server and reload this page.</p></section>`;
 });
 setInterval(() => {
-  if (view === 'dashboard' || view === 'queue') refreshData().then(render).catch(() => {});
+  if (view === 'dashboard' || view === 'queue') refreshData().then(render).catch(() => { });
 }, 5000);
