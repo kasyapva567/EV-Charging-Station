@@ -3,7 +3,7 @@ let vehicles = [
   { id: 'AP40CD5678', owner: 'sandhya', model: 'MG ZS EV', battery: 15, capacity: 50.3, connector: 'CCS2', sessions: 18, last: 'Yesterday 18:22', status: 'Queued' },
   { id: 'MH12AB5678', owner: 'gowtham', model: 'Hyundai Ioniq 5', battery: 41, capacity: 72.6, connector: 'CCS2', sessions: 31, last: 'Today 14:24', status: 'Charging' },
   { id: 'KA01CD9012', owner: 'kishore', model: 'Kia EV6', battery: 77, capacity: 77.4, connector: 'Type 2', sessions: 12, last: 'Today 13:50', status: 'Charging' },
-  { id: 'TN09KL2345', owner: 'akhil', model: 'Ola S1 Pro', battery: 55, capacity: 3.97, connector: 'CCS2', sessions: 45, last: 'Today 14:15', status: 'Charging' },
+  { id: 'TN09KL2345', owner: 'akhil', model: 'BMW X4', battery: 55, capacity: 3.97, connector: 'CCS2', sessions: 45, last: 'Today 14:15', status: 'Charging' },
   { id: 'AP39NV2007', owner: 'sneha', model: 'Nexon EV Max', battery: 19, capacity: 40.5, connector: 'Type 2', sessions: 9, last: '2 days ago', status: 'Queued' },
 ];
 let queue = [
